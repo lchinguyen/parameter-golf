@@ -671,6 +671,7 @@ class GPT(nn.Module):
         self.num_decoder_layers = num_layers - self.num_encoder_layers
         self.num_skip_weights = min(self.num_encoder_layers, self.num_decoder_layers)
         self.skip_weights = nn.Parameter(torch.ones(self.num_skip_weights, model_dim, dtype=torch.float32))
+        num_unique_blocks = int(os.environ.get("NUM_UNIQUE_BLOCKS", num_layers))
         self.blocks = nn.ModuleList(
             [
                 Block(
@@ -681,9 +682,10 @@ class GPT(nn.Module):
                     rope_base,
                     qk_gain_init,
                 )
-                for i in range(num_layers)
+                for i in range(num_unique_blocks)
             ]
         )
+        
         self.final_norm = RMSNorm()
         self.lm_head = None if tie_embeddings else CastedLinear(model_dim, vocab_size, bias=False)
         if self.lm_head is not None:
@@ -705,12 +707,12 @@ class GPT(nn.Module):
 
         # First half stores skips; second half reuses them in reverse order.
         for i in range(self.num_encoder_layers):
-            x = self.blocks[i](x, x0)
+            x = self.blocks[i % len(self.blocks)]
             skips.append(x)
         for i in range(self.num_decoder_layers):
             if skips:
                 x = x + self.skip_weights[i].to(dtype=x.dtype)[None, None, :] * skips.pop()
-            x = self.blocks[self.num_encoder_layers + i](x, x0)
+            x = self.blocks[(self.num_encoder_layers + i) % len(self.blocks)]
 
         x = self.final_norm(x).reshape(-1, x.size(-1))
         targets = target_ids.reshape(-1)

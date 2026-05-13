@@ -384,20 +384,9 @@ class GPT(nn.Module):
     # - encoder half accumulates skip tensors
     # - decoder half consumes reversed skips with learned skip_weights
     # - tied embeddings for the LM head (the baseline default setup)
-    def __init__(
-        self,
-        vocab_size: int,
-        num_layers: int,
-        dim: int,
-        num_heads: int,
-        num_kv_heads: int,
-        mlp_mult: int,
-        logit_chunk_tokens: int,
-        logit_softcap: float,
-        rope_base: float,
-        tied_embed_init_std: float,
-        qk_gain_init: float,
-    ):
+    def __init__(self, vocab_size: int, num_layers: int, dim: int, num_heads: int, num_kv_heads: int, mlp_mult: int,
+                 logit_chunk_tokens: int, logit_softcap: float, rope_base: float, tied_embed_init_std: float,
+                 qk_gain_init: float):
         super().__init__()
         if logit_softcap <= 0.0:
             raise ValueError(f"logit_softcap must be positive, got {logit_softcap}")
@@ -405,9 +394,6 @@ class GPT(nn.Module):
         self.logit_softcap = logit_softcap
 
         self.tok_emb = nn.Embedding(vocab_size, dim)
-        self.unigram_bias = mx.zeros((vocab_size,), dtype=mx.float32)
-        self.bigram_bias = mx.zeros((vocab_size, vocab_size), dtype=mx.float32)
-        self.ngram_scale = mx.array(0.1, dtype=mx.float32)
         self.num_encoder_layers = num_layers // 2
         self.num_decoder_layers = num_layers - self.num_encoder_layers
         self.num_skip_weights = min(self.num_encoder_layers, self.num_decoder_layers)
@@ -454,21 +440,8 @@ class GPT(nn.Module):
         y = target_ids.reshape(-1)
         if self.logit_chunk_tokens <= 0 or x.shape[0] <= self.logit_chunk_tokens:
             logits_proj = x @ self.tok_emb.weight.astype(x.dtype).T
-            prev_tokens = input_ids.reshape(-1)
-            ngram_logits = (
-                self.unigram_bias[None, :]
-                + self.bigram_bias[prev_tokens]
-            )
-            logits = self.softcap(
-                logits_proj
-                + self.ngram_scale.astype(logits_proj.dtype)
-                * ngram_logits.astype(logits_proj.dtype)
-            )
-            return nn.losses.cross_entropy(
-                logits.astype(mx.float32),
-                y,
-                reduction="mean",
-            )
+            logits = self.softcap(logits_proj)
+            return nn.losses.cross_entropy(logits.astype(mx.float32), y, reduction="mean")
 
         loss_sum = mx.array(0.0, dtype=mx.float32)
         n = int(x.shape[0])
@@ -812,9 +785,6 @@ def eval_val(
     total_tokens = 0.0
     total_bytes = 0.0
     for batch_idx, batch_seq_start in enumerate(range(0, total_seqs, val_batch_seqs), start=1):
-        max_val_batches = int(os.environ.get("VAL_MAX_BATCHES", total_batches))
-        if batch_idx > max_val_batches:
-            break
         batch_seq_end = min(batch_seq_start + val_batch_seqs, total_seqs)
         raw_start = batch_seq_start * args.train_seq_len
         raw_end = batch_seq_end * args.train_seq_len + 1
@@ -1133,3 +1103,141 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+====================================================================================================
+Running Python 3.14.2 (v3.14.2:df793163d58, Dec  5 2025, 12:18:06) [Clang 16.0.0 (clang-1600.0.26.6)]
+Running MLX 0.31.2
+====================================================================================================
+run_id:recur_8logical_4unique_448
+mlx_version:0.31.2
+train_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_train_*.bin
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+WARNING: train_loader:subset dataset:fineweb10B_sp1024 train_shards:1/195 new epochs will arrive sooner than the full dataset
+tokenizer_path:./data/tokenizers/fineweb_1024_bpe.model
+model_params:6890268 vocab_size:1024 layers:8 dim:448 heads:7 kv_heads:7 seq_len:1024 tie_embeddings:True
+iterations:700 train_batch_tokens:8192 grad_accum_steps:8 microbatch_tokens:1024 microbatch_batch_size:1 val_batch_size:8192 warmup_steps:20 max_wallclock_seconds:600.000
+mlx_max_microbatch_tokens:8192
+optimizer:muon+adam muon_matrix_params:24 scalar_params:17 embed_lr:0.05 matrix_lr:0.04 scalar_lr:0.04 muon_momentum:0.95 muon_steps:5
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+compute_dtype:mlx.core.bfloat16 compile:True
+dtypes tok_emb:mlx.core.bfloat16 linear_weight:mlx.core.float32 skip_weights:mlx.core.float32
+warmup_step:1/20
+warmup_step:2/20
+warmup_step:3/20
+warmup_step:4/20
+warmup_step:5/20
+warmup_step:6/20
+warmup_step:7/20
+warmup_step:8/20
+warmup_step:9/20
+warmup_step:10/20
+warmup_step:11/20
+warmup_step:12/20
+warmup_step:13/20
+warmup_step:14/20
+warmup_step:15/20
+warmup_step:16/20
+warmup_step:17/20
+warmup_step:18/20
+warmup_step:19/20
+warmup_step:20/20
+step:1/700 train_loss:6.9395 train_time:682ms step_avg:682.27ms tok_s:12008
+step:2/700 train_loss:17.3374 train_time:1457ms step_avg:728.26ms tok_s:10605
+step:3/700 train_loss:13.8720 train_time:2218ms step_avg:739.38ms tok_s:10759
+step:4/700 train_loss:10.6780 train_time:3002ms step_avg:750.58ms tok_s:10455
+step:5/700 train_loss:8.4505 train_time:3776ms step_avg:755.18ms tok_s:10599
+step:6/700 train_loss:7.1491 train_time:4587ms step_avg:764.45ms tok_s:10112
+step:7/700 train_loss:6.6327 train_time:5337ms step_avg:762.39ms tok_s:10943
+step:8/700 train_loss:6.5809 train_time:6064ms step_avg:758.03ms tok_s:11264
+step:9/700 train_loss:6.3683 train_time:6888ms step_avg:765.34ms tok_s:9952
+step:10/700 train_loss:6.3184 train_time:7841ms step_avg:784.07ms tok_s:10925
+step:100/700 train_loss:4.3223 train_time:83231ms step_avg:832.31ms tok_s:7447
+step:200/700 train_loss:3.8296 train_time:170420ms step_avg:852.10ms tok_s:10230
+step:300/700 train_loss:3.7608 train_time:254217ms step_avg:847.39ms tok_s:9818
+step:400/700 train_loss:3.5089 train_time:337541ms step_avg:843.85ms tok_s:9848
+step:500/700 train_loss:3.5414 train_time:421282ms step_avg:842.56ms tok_s:9854
+step:600/700 train_loss:3.3472 train_time:508171ms step_avg:846.95ms tok_s:9486
+step:700/700 train_loss:3.5124 train_time:593729ms step_avg:848.18ms tok_s:9866
+val_progress:1/60568
+val_progress:25/60568
+val_progress:50/60568
+val_progress:75/60568
+val_progress:100/60568
+val_progress:125/60568
+val_progress:150/60568
+val_progress:175/60568
+val_progress:200/60568
+val_progress:225/60568
+val_progress:250/60568
+val_progress:275/60568
+val_progress:300/60568
+val_progress:325/60568
+val_progress:350/60568
+val_progress:375/60568
+val_progress:400/60568
+val_progress:425/60568
+val_progress:450/60568
+val_progress:475/60568
+val_progress:500/60568
+val_progress:525/60568
+val_progress:550/60568
+val_progress:575/60568
+val_progress:600/60568
+val_progress:625/60568
+val_progress:650/60568
+val_progress:675/60568
+val_progress:700/60568
+val_progress:725/60568
+val_progress:750/60568
+val_progress:775/60568
+val_progress:800/60568
+val_progress:825/60568
+val_progress:850/60568
+val_progress:875/60568
+val_progress:900/60568
+val_progress:925/60568
+val_progress:950/60568
+val_progress:975/60568
+val_progress:1000/60568
+val_progress:1025/60568
+val_progress:1050/60568
+val_progress:1075/60568
+val_progress:1100/60568
+val_progress:1125/60568
+val_progress:1150/60568
+val_progress:1175/60568
+val_progress:1200/60568
+val_progress:1225/60568
+val_progress:1250/60568
+val_progress:1275/60568
+val_progress:1300/60568
+val_progress:1325/60568
+val_progress:1350/60568
+val_progress:1375/60568
+val_progress:1400/60568
+val_progress:1425/60568
+val_progress:1450/60568
+val_progress:1475/60568
+val_progress:1500/60568
+val_progress:1525/60568
+val_progress:1550/60568
+val_progress:1575/60568
+val_progress:1600/60568
+val_progress:1625/60568
+val_progress:1650/60568
+val_progress:1675/60568
+val_progress:1700/60568
+val_progress:1725/60568
+val_progress:1750/60568
+val_progress:1775/60568
+val_progress:1800/60568
+val_progress:1825/60568
+val_progress:1850/60568
+val_progress:1875/60568
+val_progress:1900/60568
+val_progress:1925/60568
+val_progress:1950/60568
+val_progress:1975/60568
+val_progress:2000/60568
+val_progress:2025/60568
+val_progress:2050/60568
