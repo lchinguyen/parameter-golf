@@ -1,4 +1,4 @@
-# OpenAI Parameter Golf Challenge: Recurrent + Bigram Transformer Experiment
+# OpenAI Parameter Golf Challenge: Recurrent + Bigram Transformer Experiment (by Chi L. Nguyen)
 
 This repository documents a non-record local Apple Silicon MLX experiment inspired by OpenAI Parameter Golf. The goal was to explore small language model architectures that fit within the spirit of the 10-minute / 16MB challenge.
 
