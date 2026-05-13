@@ -18,7 +18,7 @@ The best recurrent-only model used 8 logical layers and 4 unique shared blocks. 
 
 After that, I added a lightweight token-statistical calibration component inspired by token-only n-gram leaderboard methods. The model adds learned unigram and bigram logit biases to the transformer logits before softmax.
 
-## Main Code Changes
+## Code Changes
 
 - Added `NUM_UNIQUE_BLOCKS` for recurrent/shared transformer blocks
 - Used modulo indexing to reuse blocks across logical depth
@@ -33,6 +33,14 @@ After that, I added a lightweight token-statistical calibration component inspir
 | Baseline 6-layer dim-448 | train_loss 3.5362 at 700 steps |
 | Recurrent 8 logical / 4 unique dim-448 | train_loss 3.5124 at 700 steps |
 | Recurrent + bigram bias | val_bpb 2.0305, size 4.61 MB |
+
+## Skills I Developed
+
+- Designed and trained parameter-efficient transformer architectures for compression-oriented language modeling, including recurrent/shared-block transformers, grouped-query attention (GQA), and token-statistical unigram/bigram logit calibration.
+
+- Implemented and evaluated LLM optimization workflows using MLX (Apple Silicon) and PyTorch distributed training (`torchrun`), including hyperparameter tuning, experiment benchmarking, and FineWeb dataset/tokenizer processing.
+
+- Developed compressed model serialization and evaluation pipelines using INT8 quantization + Zlib compression, achieving sub-16MB language model artifacts while tracking tokenizer-agnostic metrics such as `val_bpb` and cross-entropy loss.
 
 ## Why This Result Was Meaningful
 
