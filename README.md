@@ -34,6 +34,33 @@ After that, I added a lightweight token-statistical calibration component inspir
 | Recurrent 8 logical / 4 unique dim-448 | train_loss 3.5124 at 700 steps |
 | Recurrent + bigram bias | val_bpb 2.0305, size 4.61 MB |
 
+## Why This Result Was Meaningful
+
+Although this project did not reach leaderboard-level validation performance, the result was still meaningful because it successfully demonstrated several of the core goals of the Parameter Golf challenge under local hardware constraints.
+
+The challenge emphasizes parameter efficiency, compressed artifact size, and creative architecture design rather than simply scaling model size. My best experiment achieved a compressed serialized artifact size of only `4.61 MB`, which is significantly below the challenge’s `16 MB` limit while still maintaining reasonable language modeling performance.
+
+The project also demonstrated that recurrent/shared transformer depth can improve parameter efficiency. Instead of allocating a separate set of parameters for every transformer layer, the model reused only 4 unique transformer blocks across 8 logical layers. This allowed deeper effective computation while keeping parameter count and compressed size small.
+
+In addition, I explored lightweight token-statistical calibration inspired by leaderboard approaches such as `Calib32 Token-Only N-gram + AsymLogit Stack`. I introduced learned unigram and bigram logit bias tensors into the transformer output pipeline, creating a hybrid neural/statistical language modeling approach.
+
+Compared to the leaderboard methods, my implementation remained much closer to a conventional transformer architecture rather than a highly specialized token-only compression system. The leaderboard models appear to rely heavily on optimized token-statistical modeling and calibration pipelines specifically tuned for compression-oriented evaluation metrics such as `val_bpb`.
+
+Despite running locally on Apple Silicon with partial validation (`VAL_MAX_BATCHES=100`) rather than full 8xH100 evaluation, the project still achieved:
+
+- recurrent shared-block transformer implementation
+- hybrid transformer + bigram calibration architecture
+- compressed artifact under 16MB
+- reproducible training experiments
+- measurable improvement over baseline transformer configurations
+
+The experiments established a strong foundation for future work involving:
+- trigram or hashed n-gram calibration
+- asymmetric logit calibration
+- low-rank parameterization
+- quantization-aware training
+- more advanced compression-oriented architectures
+- 
 ## Future Work
 
 - Run full validation on CUDA/H100
