@@ -50,13 +50,6 @@ Despite running locally on Apple Silicon with partial validation (`VAL_MAX_BATCH
 - reproducible training experiments
 - measurable improvement over baseline transformer configurations
 
-The experiments established a strong foundation for future work involving:
-- trigram or hashed n-gram calibration
-- asymmetric logit calibration
-- low-rank parameterization
-- quantization-aware training
-- more advanced compression-oriented architectures
-- 
 ## Future Work
 
 - Run full validation on CUDA/H100
